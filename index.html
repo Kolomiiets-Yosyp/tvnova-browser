@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#101817" />
+  <title>TVNova · Player</title>
+  <link rel="stylesheet" href="player.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="mark" aria-hidden="true">▶</span><span>TV<span class="dim">Nova</span></span><span class="brand-sub">LIVE TV</span></div>
+      <div class="topright"><span id="timeNow">--:--</span><span class="network-state"><i></i><span>PLAYER READY</span></span><button id="settingsButton" class="icon-button" title="Settings" aria-label="Settings">⚙</button></div>
+    </header>
+    <main id="watchLayout" class="watch-layout" hidden>
+      <aside class="sidebar"><div class="side-eyebrow">BROWSE</div><nav id="categoryNav" class="category-nav"></nav><button id="manageButton" class="side-cta">＋ &nbsp; Import playlist</button></aside>
+      <section class="channel-column"><div class="column-head"><h1 id="categoryHeading">All Channels</h1><span id="channelCount" class="subtle">0 channels</span></div><div class="search-wrap"><span class="search-symbol">⌕</span><input id="channelSearch" type="search" placeholder="Search channels" aria-label="Search channels" /></div><div id="channelList" class="channel-list"></div></section>
+      <section class="view-column"><div class="video-frame"><video id="videoPlayer" playsinline webkit-playsinline controls preload="none"></video><div class="video-empty" id="videoEmpty"><div class="big-play">▶</div><strong>Select a channel</strong><span>Choose a channel to start watching</span></div><div class="video-overlay"><span class="live-indicator"><i></i> LIVE</span><button id="fullScreen" class="video-expand" aria-label="Full screen">⛶</button></div></div><div class="program-panel"><div class="program-main"><div class="eyebrow">NOW PLAYING</div><h2 id="playingTitle">No channel selected</h2><p id="playingGroup">Your channels will appear here</p></div><button id="favoriteCurrent" class="fav-action" hidden>♡ &nbsp; Favorite</button></div><div class="status-panel"><span id="playbackStatus">Ready to play</span><span id="playlistInfo">Local playlist</span></div><div class="tipline">↑ ↓ Navigate channels &nbsp; · &nbsp; OK / Enter Play &nbsp; · &nbsp; Back Return &nbsp; · &nbsp; ⚙ Settings</div></section>
+    </main>
+    <main id="emptyLayout" class="empty-layout">
+      <div class="empty-left"><div class="overline">GET STARTED</div><h1>Connect your TV.</h1><p>Your TVNova player is ready. Import your playlist or send the device details to your administrator.</p><div class="code-card"><label>DEVICE ID</label><div id="deviceCode" class="device-code">TVN-••••-••••</div><label>PAIRING STATUS</label><div class="not-connected"><span class="amber-dot"></span> Not connected · local prototype</div><p class="small-note">Remote pairing is not enabled in version 0.1. Device ID is for future activation and local configuration matching.</p></div><div class="empty-actions"><button id="emptyImport" class="primary-btn">Import playlist</button><button id="emptyAbout" class="ghost-btn">How it works</button></div></div><div class="empty-right"><div class="tv-illustration"><div class="screen-art"><span class="tiny-mark">▶</span><span>TVNova</span><small>YOUR TV. YOUR CHANNELS.</small></div><div class="stand"></div></div><div class="hint-card"><span class="hint-number">01</span><div><strong>Install the player</strong><small>Open on your Smart TV</small></div></div><div class="hint-card"><span class="hint-number">02</span><div><strong>Add a playlist</strong><small>Import M3U or a config file</small></div></div><div class="hint-card"><span class="hint-number">03</span><div><strong>Start watching</strong><small>Your channels are saved locally</small></div></div></div>
+    </main>
+    <footer class="footer"><span>TVNova <b>0.1.0</b> · LOCAL PROTOTYPE</span><span id="footerHint">No subscription · No account · No TVNova server</span></footer>
+  </div>
+  <input type="file" id="playlistFile" accept=".m3u,.m3u8,text/plain" hidden />
+  <input type="file" id="configFile" accept=".json,.tvnova,application/json" hidden />
+  <div class="modal-shade" id="settingsModal" hidden><div class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><div class="modal-top"><div><div class="overline">TVNOVA</div><h2 id="settingsTitle">Player settings</h2></div><button id="closeSettings" class="close-btn" aria-label="Close">✕</button></div><div class="settings-body"><div class="setting-box"><h3>Import playlist</h3><p>Upload an M3U file from this device, or enter a playlist URL. Channels stay on the TV after restart.</p><div class="action-grid"><button id="importM3u" class="primary-btn">Upload M3U</button><button id="importConfig" class="ghost-btn">Import TVNova config</button></div><div class="input-row"><input id="playlistUrl" type="url" placeholder="https://example.com/playlist.m3u" /><button id="saveUrl" class="ghost-btn">Use URL</button></div><p id="importMessage" class="import-message"></p></div><div class="setting-box"><h3>Device</h3><div class="data-row"><span>Device ID</span><strong id="settingsDeviceId"></strong></div><div class="data-row"><span>Connection</span><strong>Local only (v0.1)</strong></div><div class="data-row"><span>Channel count</span><strong id="settingsCount">0</strong></div><button id="clearData" class="danger-plain">Clear all saved channels</button></div></div></div></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="shared.js"></script>
+  <script src="player.js"></script>
+</body>
+</html>
