@@ -1,4 +1,4 @@
-/* TVNova Remote Navigation v0.3 — loaded after player.js. */
+/* TVNova Remote Navigation v0.4 — loaded after player.js. */
 (function () {
   'use strict';
   var style = document.createElement('style');
@@ -7,6 +7,9 @@
     '.channel-item.tvn-remote-focused{background:#244839!important;border-color:#e6b85d!important}',
     '.cat-item.tvn-remote-focused{background:#244839!important;border-color:#e6b85d!important}',
     'body.tvn-remote-active .tipline{color:#d1ddca}',
+    'body.tvn-css-fullscreen .video-frame{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;max-height:none!important;aspect-ratio:auto!important;border:0!important;border-radius:0!important;z-index:10000!important}',
+    'body.tvn-css-fullscreen .video-frame video{width:100%!important;height:100%!important}',
+    'body.tvn-css-fullscreen #tvn-remote-help{display:none}',
     '#tvn-remote-help{position:fixed;bottom:49px;right:20px;background:#142521e6;border:1px solid #577366;border-radius:8px;padding:6px 10px;font-size:12px;color:#d7e7dd;z-index:12;pointer-events:none}',
     '@media(max-width:720px){#tvn-remote-help{display:none}}'
   ].join('');
@@ -21,7 +24,7 @@
   var focusTimer = 0;
   var help = document.createElement('div');
   help.id = 'tvn-remote-help';
-  help.textContent = '\u2190 \u2191 \u2192 \u2193 Navigate   \u00b7   OK Select   \u00b7   Back Return';
+  help.textContent = '\u2190 \u2191 \u2192 \u2193 Navigate  \u00b7  OK Play / Fullscreen  \u00b7  CH+/- Change  \u00b7  Back';
   help.hidden = true;
   document.body.appendChild(help);
 
@@ -133,12 +136,54 @@
     if (close) close.click();
     setTimeout(function () { moveFocus(isVisible(lastMain) ? lastMain : defaultTarget()); }, 20);
   }
+  // Prefer native element fullscreen (keeps keyboard events within the web page).
+  // CSS fallback allows TV browser remote commands even if Fullscreen API is unavailable.
+  function fullscreenActive() {
+    var frame = document.querySelector('.video-frame');
+    var video = document.getElementById('videoPlayer');
+    return document.body.classList.contains('tvn-css-fullscreen') ||
+      !!document.fullscreenElement || !!document.webkitFullscreenElement ||
+      !!(video && video.webkitDisplayingFullscreen);
+  }
+  function enterFullscreen() {
+    var frame = document.querySelector('.video-frame');
+    if (!frame || !document.querySelector('.channel-item.selected')) return;
+    function fallback() { document.body.classList.add('tvn-css-fullscreen'); }
+    try {
+      var request = frame.requestFullscreen || frame.webkitRequestFullscreen;
+      if (!request) { fallback(); return; }
+      var pending = request.call(frame);
+      if (pending && typeof pending.catch === 'function') pending.catch(fallback);
+    } catch (err) { fallback(); }
+  }
+  function exitFullscreen() {
+    document.body.classList.remove('tvn-css-fullscreen');
+    if (document.fullscreenElement && document.exitFullscreen) {
+      var pending = document.exitFullscreen();
+      if (pending && typeof pending.catch === 'function') pending.catch(function () {});
+    } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+    var video = document.getElementById('videoPlayer');
+    if (video && video.webkitDisplayingFullscreen && video.webkitExitFullscreen) video.webkitExitFullscreen();
+  }
+  function changeChannel(direction) {
+    // Follow the current category/search order. Fallback to all channels if no channels are shown.
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.channel-item'));
+    if (!buttons.length || settingsOpen()) return;
+    var active = document.querySelector('.channel-item.selected');
+    var index = buttons.indexOf(active);
+    var next = index < 0 ? (direction > 0 ? 0 : buttons.length - 1) :
+      (index + direction + buttons.length) % buttons.length;
+    buttons[next].click();
+    // The player redraws buttons on every channel change.
+    var updated = document.querySelector('.channel-item.selected');
+    if (!fullscreenActive() && updated) moveFocus(updated);
+    else if (updated) { clearHighlight(); current = updated; lastMain = updated; }
+  }
   function handleBack() {
     var video = document.getElementById('videoPlayer');
-    if (document.fullscreenElement) { document.exitFullscreen(); return; }
-    if (video && video.webkitDisplayingFullscreen && video.webkitExitFullscreen) {
-      video.webkitExitFullscreen(); return;
-    }
+    if (fullscreenActive()) { exitFullscreen(); return; }
     if (settingsOpen()) { leaveModal(); return; }
     var selected = document.querySelector('.channel-item.selected');
     if (selected && current !== selected) { moveFocus(selected); return; }
@@ -158,13 +203,16 @@
     if (key === 'Right' || e.keyCode === 39) return 'ArrowRight';
     if (key === 'OK' || key === 'Select' || key === 'NumpadEnter' || e.keyCode === 13) return 'Enter';
     if (key === 'BrowserBack' || key === 'GoBack' || key === 'Escape' || key === 'Backspace' || e.keyCode === 461 || e.keyCode === 10009) return 'Back';
+    // Browser mappings differ by TV model; some buttons are reserved by the OS.
+    if (key === 'ChannelUp' || key === 'Channel+' || key === 'PageUp' || key === 'Prior' || e.keyCode === 33 || e.keyCode === 427) return 'ChannelUp';
+    if (key === 'ChannelDown' || key === 'Channel-' || key === 'PageDown' || key === 'Next' || e.keyCode === 34 || e.keyCode === 428) return 'ChannelDown';
     if (key === 'MediaPlayPause' || key === 'PlayPause') return 'MediaPlayPause';
     return key;
   }
   window.addEventListener('keydown', function (e) {
     var key = keyName(e);
     var isNav = key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight';
-    if (!isNav && key !== 'Enter' && key !== 'Back' && key !== 'MediaPlayPause') return;
+    if (!isNav && key !== 'Enter' && key !== 'Back' && key !== 'MediaPlayPause' && key !== 'ChannelUp' && key !== 'ChannelDown') return;
     // Do not hijack input typing and the TV browser's built-in soft keyboard.
     if (isTextEditing(document.activeElement)) {
       if (key === 'Back' && document.activeElement.tagName !== 'TEXTAREA') {
@@ -177,6 +225,12 @@
       if (v) { if (v.paused) v.play().catch(function () {}); else v.pause(); }
       return;
     }
+    if (key === 'ChannelUp' || key === 'ChannelDown') {
+      if (!settingsOpen()) changeChannel(key === 'ChannelUp' ? 1 : -1);
+      return;
+    }
+    if (fullscreenActive() && key === 'Enter') { exitFullscreen(); return; }
+    if (fullscreenActive() && isNav) return;
     prepare();
     if (key === 'Back') { handleBack(); return; }
     if (isNav) {
@@ -188,6 +242,11 @@
       var target = current;
       if (isTextEditing(target)) { target.focus(); return; }
       target.click();
+      if (target.classList.contains('channel-item')) {
+        enterFullscreen();
+        return;
+      }
+      if (target.id === 'fullScreen') return;
       restoreAfterClick(target);
     }
   }, true); // Capture: existing player.js keyboard listener won't intercept remote keys.
